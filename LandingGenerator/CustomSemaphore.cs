@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 
 namespace LandingGenerator
 {
-    public static class CustomSemaphore
+    public class CustomSemaphore
     {
-        public static bool IsFree { get; private set; }
+        public bool IsFree { get; private set; }
 
-        public static void Lock()
+        public void Lock()
         {
             IsFree = false;
         }
 
-        public static void Unlock()
+        public void Unlock()
         {
             IsFree = true;
         }

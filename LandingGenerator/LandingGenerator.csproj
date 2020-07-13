@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CustomSemaphore.cs" />
+    <Compile Include="TextDownloader.cs" />
     <Compile Include="Main.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -14,6 +13,8 @@ namespace LandingGenerator
     {
         private Main _main;
 
+        private CustomSemaphore CustomSemaphore { get; set; } = new CustomSemaphore();
+
         private WebBrowser Browser = new WebBrowser();
 
         private volatile string imageAltCheck;
@@ -23,6 +24,7 @@ namespace LandingGenerator
         private volatile string IMAGE_DOWNLOAD_FOLDER;
 
         List<string> imageUrlsToDownload = new List<string>();
+        volatile List<string> imgAlts = new List<string>();
 
         System.Windows.Forms.Timer mainTimer;
 
@@ -59,9 +61,10 @@ namespace LandingGenerator
                     var imgDivs = Browser.Document.GetElementsByTagName("div")
                         .Cast<HtmlElement>()
                         .Where(k => k.GetAttribute("className").Contains("isv-r"))
-                        .Take(Main.IA_MAX_VARIATIONS)
+                        .GroupBy(k => k.FirstChild.FirstChild.FirstChild.GetAttribute("alt"))
+                        .Select(k => k.First())
                         .ToList();
-                    var imgAlts = imgDivs
+                    imgAlts = imgDivs
                         .Select(k => k.FirstChild.FirstChild.FirstChild.GetAttribute("alt"))
                         .ToList();
 
@@ -77,15 +80,18 @@ namespace LandingGenerator
                         .ToList()
                         .ForEach(k =>
                         {
-                            k.InvokeMember("click");
-                            imageAltCheck = imgAlts[altIndex];
-                            Thread.Sleep(3000);
-                            CustomSemaphore.Unlock();
-                            Thread.Sleep(2000);
-                            CustomSemaphore.Lock();
-                            k.InvokeMember("click");
-                            Thread.Sleep(3000);
-                            altIndex++;
+                            if (imageUrlsToDownload.Count < Main.IA_MAX_VARIATIONS)
+                            {
+                                k.InvokeMember("click");
+                                imageAltCheck = imgAlts[altIndex];
+                                Thread.Sleep(3000);
+                                CustomSemaphore.Unlock();
+                                Thread.Sleep(2000);
+                                CustomSemaphore.Lock();
+                                k.InvokeMember("click");
+                                Thread.Sleep(3000);
+                                altIndex++; 
+                            }                                                        
                         });
                         _main.CurrentTimerState = Main.TimerStates.Unknow;
                         mainTimer.Enabled = false;
@@ -115,7 +121,10 @@ namespace LandingGenerator
             WebClient wc = new WebClient();
             foreach (var imageUrl in imageUrlsToDownload)
             {
-                await wc.DownloadFileTaskAsync(imageUrl, Path.Combine(IMAGE_DOWNLOAD_FOLDER, Guid.NewGuid().ToString() + _main.GetExtentionFromUrl(imageUrl)));
+                string imageId = Guid.NewGuid().ToString();
+                await wc.DownloadFileTaskAsync(imageUrl, Path.Combine(IMAGE_DOWNLOAD_FOLDER, imageId + _main.GetExtentionFromUrl(imageUrl)));
+                File.WriteAllText(Path.Combine(IMAGE_DOWNLOAD_FOLDER, imageId + ".alt"), imgAlts.First());
+                imgAlts.Remove(imgAlts.First());
             }
         }
 

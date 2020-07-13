@@ -14,7 +14,7 @@ namespace LandingGenerator
     public partial class Main : Form
     {
         private object _lock = new object();
-        public const int IA_MAX_VARIATIONS = 2;
+        public const int IA_MAX_VARIATIONS = 8;
 
         public enum TimerStates { Unknow, Image, Video, Text }
         public volatile TimerStates CurrentTimerState;
@@ -37,6 +37,7 @@ namespace LandingGenerator
         {
             SelectedTheme = txtTheme.Text;
             new ImageDownloader(this);
+            new TextDownloader(this, listSections.Items.Cast<string>().ToList());
             await Task.CompletedTask;
         }        
 
